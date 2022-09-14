@@ -19,11 +19,14 @@
   },
   "autoload": {
     "psr-4": {
-      "Hoanvv\\": "Hoanvv",
-      "Hoanvv\\Test\\": "tests"
+      "Hoanvv\\App\\": "app",
+      "Hoanvv\\Test\\": "app/Test"
     },
     "files": [
       "app/Helper/common.php"
     ]
+  },
+  "scripts": {
+      "test": "phpunit tests/"
   }
 }

@@ -38,7 +38,7 @@ class ContainerFactory
         // App individual containers
         $containerBuilder->addDefinitions($this->containerPath);
         // Common containers
-        $containerBuilder->addDefinitions(__DIR__ . '/../config/container.php');
+        $containerBuilder->addDefinitions($this->appRootDir . '/config/container.php');
         // App container
         $this->loadAppContainer($containerBuilder);
         // Build PHP-DI Container instance
@@ -64,7 +64,7 @@ class ContainerFactory
                 }
 
                 // Register common middleware
-                (require __DIR__ . '/../config/middleware.php')($app);
+                (require $this->appRootDir . '/config/middleware.php')($app);
 
                 return $app;
             },
@@ -73,13 +73,13 @@ class ContainerFactory
 
     protected function loadHelperFunctions(): void
     {
-        require_once __DIR__ . '/../Utils/helpers.php';
+        require_once $this->appRootDir . '/app/Helper/common.php';
     }
 
     protected function loadSettings(): void
     {
         // Common settings
-        require_once __DIR__ . '/../config/settings.php';
+        require_once $this->appRootDir . '/config/settings.php';
 
         // App individual settings
         $appSettingsFile = $this->appRootDir . '/config/settings.php';
