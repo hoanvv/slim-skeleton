@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         backupGlobals="false"
+         backupStaticAttributes="false"
+         bootstrap="../config/bootstrap.php"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
+         colors="true">
+
+    <testsuites>
+        <testsuite name="Application Test Suite">
+            <directory>./Actions/</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage processUncoveredFiles="false">
+        <include>
+            <directory suffix=".php">../app/*</directory>
+        </include>
+        <exclude>
+            <directory prefix="Abstract" suffix=".php">../app/*</directory>
+            <directory prefix="trait" suffix=".php">../app/*</directory>
+        </exclude>
+        <report>
+            <html outputDirectory="report" lowUpperBound="35" highLowerBound="70"/>
+            <text outputFile="php://stdout" showUncoveredFiles="false" showOnlySummary="true"/>
+        </report>
+    </coverage>
+    <php>
+        <env name="API_KEY" value="devenv" force="true"/>
+        <!-- <env name="ERP_API" value="https://api.bergfreunde.de/v1/erp" force="true"/> -->
+        <env name="ERP_API_KEY" value="devenv" force="true"/>
+        <env name="BF_DEBUG" value="1" force="true"/>
+    </php>
+</phpunit>

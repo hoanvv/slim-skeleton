@@ -1,6 +1,6 @@
 <?php
 
-namespace Hoanvv\App\Test;
+namespace Hoanvv\Test;
 
 use Psr\Http\Message\ResponseInterface;
 

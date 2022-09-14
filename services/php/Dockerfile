@@ -23,9 +23,9 @@ RUN docker-php-ext-configure gd --with-jpeg --with-freetype
 RUN docker-php-ext-install pdo pdo_mysql zip xsl gd intl opcache exif mbstring
 
 # Install node
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash && apt -y install nodejs
+# RUN curl -sL https://deb.nodesource.com/setup_14.x | bash && apt -y install nodejs
 
-WORKDIR /var/www/shopware
+WORKDIR /var/www/html
 
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 RUN curl -sS https://get.symfony.com/cli/installer | bash

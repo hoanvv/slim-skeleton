@@ -1,6 +1,6 @@
 <?php
 
-namespace Hoanvv\App\Test;
+namespace Hoanvv\Test;
 
 use Slim\Psr7\Factory\StreamFactory;
 use Slim\Psr7\Headers;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Hoanvv\App\Test;
+namespace Hoanvv\Test;
 
 use Hoanvv\App\Factory\DatabaseFactory;
 use Exception;
