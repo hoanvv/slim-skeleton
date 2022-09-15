@@ -15,7 +15,9 @@
     "phpstan/phpstan": "^1.2",
     "phpunit/phpunit": "^9.5",
     "povils/phpmnd": "^2.5",
-    "php-parallel-lint/php-parallel-lint": "^1.3"
+    "php-parallel-lint/php-parallel-lint": "^1.3",
+    "phpspec/prophecy": "^1.15",
+    "phpspec/prophecy-phpunit": "^2.0"
   },
   "autoload": {
     "psr-4": {
