@@ -39,6 +39,10 @@ class ContainerFactory
         $containerBuilder->addDefinitions($this->containerPath);
         // Common containers
         $containerBuilder->addDefinitions($this->appRootDir . '/config/container.php');
+
+        // Common repository
+        $containerBuilder->addDefinitions($this->appRootDir . '/config/repositories.php');
+
         // App container
         $this->loadAppContainer($containerBuilder);
         // Build PHP-DI Container instance
