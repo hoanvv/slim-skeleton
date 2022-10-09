@@ -140,6 +140,8 @@ abstract class TestCase extends PHPUnit_TestCase
      * Needs to be implemented by subclasses.
      */
     abstract public function createApplication(): App;
+    // init user data for testing purposes
+    abstract public function setUpData();
 
     public function assertResponseStatus(TestResponse $response, int $statusCode): void
     {
@@ -177,6 +179,7 @@ abstract class TestCase extends PHPUnit_TestCase
     protected function refreshApplication(): void
     {
         $this->app = $this->createApplication();
+        $this->setUpData();
     }
 
     /**

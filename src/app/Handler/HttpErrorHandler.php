@@ -10,7 +10,8 @@ class HttpErrorHandler extends ErrorHandler
     protected function respond(): ResponseInterface
     {
         $exception = $this->exception;
-        $code = $exception->getCode();
+        // fix type of argument
+        $code = (int) $exception->getCode();
         if ($code < 400 || $code > 999) {
             $code = 500;
         }
