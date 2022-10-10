@@ -80,7 +80,7 @@ abstract class Action
     {
         // make sure the response is initialized before used
         if ($response) {
-            call_user_func('Hoanvv\App\Actions\Action::__invoke', $response);
+            $this->response = $response;
         }
 
         $payload = new ActionPayload($statusCode, $data);

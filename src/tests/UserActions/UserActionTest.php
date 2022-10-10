@@ -5,14 +5,10 @@ namespace Tests\Application\Actions;
 use Hoanvv\Test\TestCase;
 use Slim\App;
 use Prophecy\PhpUnit\ProphecyTrait;
-use Hoanvv\App\Actions\User\ListingAction;
-use Hoanvv\App\Domain\Repositories\User\IUserRepository;
-use Hoanvv\App\Domain\Models\User;
+
 use Hoanvv\App\Actions\ActionPayload;
-use Hoanvv\App\Domain\Repositories\User\UserRepository;
-use Hoanvv\App\Database\MasterDatabase;
+use Hoanvv\App\Database\IMasterDatabase;
 use DateTimeImmutable;
-use PDO;
 
 class UserActionTest extends TestCase
 {
@@ -27,21 +23,28 @@ class UserActionTest extends TestCase
      */
     public function setUpData()
     {
+        // get DB connection
+        $container = $this->app->getContainer();
+        $this->db = $container->get(IMasterDatabase::class);
         $date = (new DateTimeImmutable())->format('YmdHis');
         $this->date = $date; // time or running tests
         $this->username = "username_$date";
         $this->password = "pwd_$date";
-        $this->db = (new MasterDatabase())->db();
-        //begin transaction:
-        // $this->db->beginTransaction();
-        // $this->db->commit(true);
     }
 
     public function createApplication(): App
     {
         return (require __DIR__ . '/../../config/bootstrap.php');
     }
-
+    public function createNewUserForTesting()
+    {
+        $userData = [
+            'username' => $this->username,
+            'password' => $this->password
+        ];
+        // Mock a request
+        $this->post('/register', $userData);
+    }
     /**
      *  TEST CASE(S) FOR REGISTER USER API
      */
@@ -53,19 +56,17 @@ class UserActionTest extends TestCase
      */
     public function testRegisterNewUsersSuccessfully()
     {
-        $userData = [
-            'username' => $this->username,
-            'password' => $this->password
-        ];
-        // Mock a request
-        $this->post('/register', $userData);
-
+        $this->db->beginTransaction();
+        
+        $this->createNewUserForTesting();
         // Check if data is inserted successfully
         $query = "SELECT * FROM users where username = '$this->username' and password = '$this->password'";
         $result = $this->db->query($query);
-        $row_count = $result->rowCount();
+        $rowCount = $result->rowCount();
         // Check testing results
-        $this->assertTrue($row_count == 1, "Create New User Failed: Find $row_count record(s)");
+        $this->assertTrue($rowCount == 1, "Create New User Failed: Find $rowCount record(s)");
+        $this->db->rollback();
+
     }
 
     /**
@@ -75,6 +76,9 @@ class UserActionTest extends TestCase
      */
     public function testRegisterExistingUsername()
     {
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
         $userData = [
             'username' => $this->username,
             'password' => $this->password
@@ -91,6 +95,7 @@ class UserActionTest extends TestCase
         // Check testing results
         $this->assertTrue($result_row == 1, "Register user with same username: Find $result_row record(s)");
         $this->assertSame(json_encode($expectedPayload), json_encode($payload));
+        $this->db->rollback();
     }
     /**
      * create user: LACK of information
@@ -99,35 +104,40 @@ class UserActionTest extends TestCase
      */
     public function testRegisterUsernameNotEnoughInfo()
     {
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
         // lack of username
-        $userData_1 = [
+        $userData1 = [
             'password' => $this->password . '_lackofusername',
         ];
         // lack of password
-        $userData_2 = [
+        $userData2 = [
             'username' => $this->username . '_lackofpassword',
         ];
 
         // Mock a request
-        $resp_1 = $this->post('/register', $userData_1);
-        $resp_2 = $this->post('/register', $userData_2);
-        $payload_1 = $resp_1->getBody();
-        $payload_2 = $resp_2->getBody();
+        $resp1 = $this->post('/register', $userData1);
+        $resp2 = $this->post('/register', $userData2);
+        $payload1 = $resp1->getBody();
+        $payload2 = $resp2->getBody();
         // Check if the data is imported
-        $query_1 = "SELECT * FROM users where password = '$this->password" . "_lackofusername' ";
-        $query_2 = "SELECT * FROM users where username = '$this->username" . "_lackofpassword' ";
+        $query1 = "SELECT * FROM users where password = '$this->password" . "_lackofusername' ";
+        $query2 = "SELECT * FROM users where username = '$this->username" . "_lackofpassword' ";
 
-        $result_1 = $this->db->query($query_1)->rowCount() == 0;
-        $result_2 = $this->db->query($query_2)->rowCount() == 0;
+        $result1 = $this->db->query($query1)->rowCount() == 0;
+        $result2 = $this->db->query($query2)->rowCount() == 0;
         // Expected Payload
         $expectedPayload = new ActionPayload(400, "Username or Password cannot be empty");
 
         // Check testing results
-        $this->assertTrue($result_1, "Register user lacking username");
-        $this->assertTrue($result_2, "Register user lacking password");
+        $this->assertTrue($result1, "Register user lacking username");
+        $this->assertTrue($result2, "Register user lacking password");
 
-        $this->assertSame(json_encode($payload_1), json_encode($expectedPayload));
-        $this->assertSame(json_encode($payload_2), json_encode($expectedPayload));
+        $this->assertSame(json_encode($payload1), json_encode($expectedPayload));
+        $this->assertSame(json_encode($payload2), json_encode($expectedPayload));
+        $this->db->rollback();
+
     }
 
     /**
@@ -139,9 +149,12 @@ class UserActionTest extends TestCase
      */
     public function testGetAvailableUser()
     {
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
         // Mock a request
-        $user_id = ($this->db->query("SELECT id FROM users where username = '$this->username'")->fetch())['id'];
-        $resp = $this->get("/v1/info/$user_id");
+        $userId = ($this->db->query("SELECT id FROM users where username = '$this->username'")->fetch())['id'];
+        $resp = $this->get("/v1/info/$userId");
         $payload = $resp->getBody();
         // Expected result
         $expectedPayload = new ActionPayload(200, [
@@ -149,7 +162,8 @@ class UserActionTest extends TestCase
             'last_name' => null,
         ]);
         // Checking testing result
-        $this->assertSame(json_encode($expectedPayload), json_encode($payload), "user id = $user_id");
+        $this->assertSame(json_encode($expectedPayload), json_encode($payload), "user id = $userId");
+        $this->db->rollback();
     }
     /**
      * get unavailable user id in INT (no exist)
@@ -158,13 +172,15 @@ class UserActionTest extends TestCase
      */
     public function testGetUnavailableUsers()
     {
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
         // Find the current userid test
         $query = "SELECT id from users where username = '$this->username'";
         $result = $this->db->query($query)->fetch();
-        $user_id = $result['id'];
-        $unavai_id = $user_id + 2897;
+        $userId = $result['id'];
+        $unavaiId = $userId + 2897;
         // Mock a request with an unavailable user_id
-        $resp = $this->get("/v1/info/$unavai_id");
+        $resp = $this->get("/v1/info/$unavaiId");
         $payload = $resp->getBody();
         // Expected result
         $expectedPayload = [
@@ -173,6 +189,8 @@ class UserActionTest extends TestCase
         ];
         // Checking testing result
         $this->assertSame(json_encode($expectedPayload), json_encode($payload));
+        $this->db->rollback();
+
     }
     /**
      * get user with wrong pattern of user_id (string instead int)
@@ -181,7 +199,8 @@ class UserActionTest extends TestCase
      */
     public function testGetUserIdInString()
     {
-
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
         // Mock a request with an unavailable user_id (in string)
         $resp = $this->get("/v1/info/dump_string");
         $payload = $resp->getBody();
@@ -192,6 +211,8 @@ class UserActionTest extends TestCase
         ];
         // Checking testing result
         $this->assertSame(json_encode($expectedPayload), json_encode($payload));
+        $this->db->rollback();
+
     }
 
     /**
@@ -206,7 +227,10 @@ class UserActionTest extends TestCase
      */
     public function testUpdateUserAllSuccess()
     {
-        $user_update = [
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
+        $userUpdate = [
             'password' => "newpwd_$this->date",
             'first_name' => "firstname_$this->date",
             'last_name' => "lastname_$this->date",
@@ -214,51 +238,58 @@ class UserActionTest extends TestCase
         // get test user
         $query = "SELECT id from users where username = '$this->username'";
         $result = $this->db->query($query)->fetch();
-        $user_id = $result['id'];
-        $resp = $this->put("/v1/update/$user_id", $user_update);
+        $userId = $result['id'];
+        $resp = $this->put("/v1/update/$userId", $userUpdate);
         $payload = $resp->getBody();
         // Expected output
         $expectedPayload = new ActionPayload(200, 'Update successfully');
         // Get data after update
         $query = "SELECT * FROM users WHERE password = :password  AND first_name = :first_name AND last_name = :last_name ";
         $exec = $this->db->prepare($query);
-        $exec->bindParam(':password', $user_update['password']);
-        $exec->bindParam(':first_name', $user_update['first_name']);
-        $exec->bindParam(':last_name', $user_update['last_name']);
+        $exec->bindParam(':password', $userUpdate['password']);
+        $exec->bindParam(':first_name', $userUpdate['first_name']);
+        $exec->bindParam(':last_name', $userUpdate['last_name']);
         $exec->execute();
-        $row_count = $exec->rowCount();
-        $affected_id = $exec->fetch()['id'];
+        $rowCount = $exec->rowCount();
+        $affectedId = $exec->fetch()['id'];
         // Check test result
-        $this->assertTrue($row_count == 1, "Can't find User after UPDATE");
-        $this->assertTrue($affected_id == $user_id, "Update wrong user");
+        $this->assertTrue($rowCount == 1, "Can't find User after UPDATE");
+        $this->assertTrue($affectedId == $userId, "Update wrong user");
         $this->assertSame(json_encode($expectedPayload), json_encode($payload));
+        $this->db->rollback();
+
     }
     /**
      * update some information
      */
     public function testUpdateUserSomeSuccess()
     {
-        $user_update = [
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
+        $userUpdate = [
             'first_name' => "new_firstname_$this->date",
             'last_name' => "new_lastname_$this->date"
         ];
         // get test user
         $query = "SELECT id from users where username = '$this->username'";
         $result = $this->db->query($query)->fetch();
-        $user_id = $result['id'];
+        $userId = $result['id'];
         // For this func, no need to check output response
-        $this->put("/v1/update/$user_id", $user_update);
+        $this->put("/v1/update/$userId", $userUpdate);
         // Get data after update
         $query = "SELECT * FROM users WHERE first_name = :first_name AND last_name = :last_name";
         $exec = $this->db->prepare($query);
-        $exec->bindParam(':first_name', $user_update['first_name']);
-        $exec->bindParam(':last_name', $user_update['last_name']);
+        $exec->bindParam(':first_name', $userUpdate['first_name']);
+        $exec->bindParam(':last_name', $userUpdate['last_name']);
         $exec->execute();
-        $row_count = $exec->rowCount();
-        $affected_id = $exec->fetch()['id'];
+        $rowCount = $exec->rowCount();
+        $affectedId = $exec->fetch()['id'];
         // Check test result
-        $this->assertTrue($row_count == 1, "Can't find User after UPDATE");
-        $this->assertTrue($affected_id == $user_id, "Update wrong user");
+        $this->assertTrue($rowCount == 1, "Can't find User after UPDATE");
+        $this->assertTrue($affectedId == $userId, "Update wrong user");
+        $this->db->rollback();
+
     }
     /**
      * FAILED CASE(S)
@@ -269,10 +300,13 @@ class UserActionTest extends TestCase
     public function testUpdateUserFail()
     {
         // get test user
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
         $query = "SELECT * from users where username = '$this->username'";
-        $before_data = $this->db->query($query)->fetch();
-        $user_id = $before_data['id'];
-        $resp = $this->put("/v1/update/$user_id", []);
+        $beforeData = $this->db->query($query)->fetch();
+        $userId = $beforeData['id'];
+        $resp = $this->put("/v1/update/$userId", []);
         $payload = $resp->getBody();
         // Expected result
         $expectedPayload = [
@@ -280,12 +314,14 @@ class UserActionTest extends TestCase
             'message' => "Bad request"
         ];
         // Check if user data is changed
-        $data = $this->db->query("SELECT * FROM users where id = $user_id")->fetch();
-        $status = $before_data['password'] == $data['password']
-            && $before_data['first_name'] == $data['first_name']
-            && $before_data['last_name'] == $data['last_name'];
+        $data = $this->db->query("SELECT * FROM users where id = $userId")->fetch();
+        $status = $beforeData['password'] == $data['password']
+            && $beforeData['first_name'] == $data['first_name']
+            && $beforeData['last_name'] == $data['last_name'];
         $this->assertTrue($status, "Updated Unintentionally");
         $this->assertSame(json_encode($expectedPayload), json_encode($payload));
+        $this->db->rollback();
+
     }
 
     /**
@@ -299,14 +335,17 @@ class UserActionTest extends TestCase
      */
     public function testDeleteUserFailed()
     {
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
         // get test user
         $query = "SELECT * from users where username = '$this->username'";
-        $before_data = $this->db->query($query)->fetch();
-        $user_id = $before_data['id'];
-        $fake_userid = $user_id + 2897;
-        $resp = $this->delete("/v1/delete/$fake_userid");
+        $beforeData = $this->db->query($query)->fetch();
+        $userId = $beforeData['id'];
+        $fakeUserId = $userId + 2897;
+        $resp = $this->delete("/v1/delete/$fakeUserId");
         $payload = $resp->getBody();
-        $before_dl = ($this->db->query("SELECT count(id) as total FROM users")->fetch())['total'];
+        $beforeDl = ($this->db->query("SELECT count(id) as total FROM users")->fetch())['total'];
 
         // Expected result
         $expectedPayload = [
@@ -314,11 +353,13 @@ class UserActionTest extends TestCase
             'message' => 'Unauthorized request',
         ];
         // Check if user data is changed
-        $after_dl = ($this->db->query("SELECT count(id) as total FROM users")->fetch())['total'];
+        $afterDl = ($this->db->query("SELECT count(id) as total FROM users")->fetch())['total'];
 
         // Check testing resutl
-        $this->assertTrue($before_dl == $after_dl, "Deleted Unintentionally");
+        $this->assertTrue($beforeDl == $afterDl, "Deleted Unintentionally");
         $this->assertSame(json_encode($expectedPayload), json_encode($payload));
+        $this->db->rollback();
+
     }
     /**
      * PASSED CASE(S)
@@ -328,21 +369,23 @@ class UserActionTest extends TestCase
      */
     public function testDeleteUserSuccess()
     {
+        $this->db->beginTransaction();
+        $this->createNewUserForTesting();
+
         // get test user
         $query = "SELECT * from users where username = '$this->username'";
-        $before_data = $this->db->query($query)->fetch();
-        $user_id = $before_data['id'];
-
-        $resp = $this->delete("/v1/delete/$user_id");
+        $beforeData = $this->db->query($query)->fetch();
+        $userId = $beforeData['id'];
+        $resp = $this->delete("/v1/delete/$userId");
         $payload = $resp->getBody();
         $expectedPayload = new ActionPayload(200, 'Delete successfully');
         $this->assertSame(json_encode($expectedPayload), json_encode($payload));
 
         // Check if user is deleted successfully
-        $status = $this->db->query("SELECT * FROM users where id = $user_id")->rowCount() == 0;
+        $status = $this->db->query("SELECT * FROM users where id = $userId")->rowCount() == 0;
         $this->assertTrue($status, "Didnot delete user successfully");
 
         // Rollback any changes in db
-        // $this->db->rollback();
+        $this->db->rollback();
     }
 }
