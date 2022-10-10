@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Hoanvv\App\Actions;
@@ -18,6 +19,7 @@ abstract class Action
 
     protected Response $response;
 
+    public int $statusCode = 400;
     protected array $args;
 
     public function __construct(LoggerFactory $logger)
@@ -29,17 +31,19 @@ abstract class Action
      * @throws HttpNotFoundException
      * @throws HttpBadRequestException
      */
-    public function __invoke(Request $request, Response $response, array $args): Response
+    public function __invoke(Response $response)
     {
-        $this->request = $request;
+        // point to function in class, no need to use __invoke() method
+        // keep a reference to the response
+        // $this->request = $request;
         $this->response = $response;
-        $this->args = $args;
+        // $this->args = $args;
 
-        try {
-            return $this->action();
-        } catch (DomainRecordNotFoundException $e) {
-            throw new HttpNotFoundException($this->request, $e->getMessage());
-        }
+        // try {
+        //     return $this->action();
+        // } catch (DomainRecordNotFoundException $e) {
+        //     throw new HttpNotFoundException($this->request, $e->getMessage());
+        // }
     }
 
     /**
@@ -72,8 +76,13 @@ abstract class Action
     /**
      * @param array|object|null $data
      */
-    protected function respondWithData($data = null, int $statusCode = 200): Response
+    protected function respondWithData($data = null, int $statusCode = 200, $response = null): Response
     {
+        // make sure the response is initialized before used
+        if ($response) {
+            $this->response = $response;
+        }
+
         $payload = new ActionPayload($statusCode, $data);
 
         return $this->respond($payload);
@@ -85,7 +94,7 @@ abstract class Action
         $this->response->getBody()->write($json);
 
         return $this->response
-                    ->withHeader('Content-Type', 'application/json')
-                    ->withStatus($payload->getStatusCode());
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus($payload->getStatusCode());
     }
 }
