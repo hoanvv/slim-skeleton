@@ -20,7 +20,8 @@ RUN apt update && apt install -y \
 
 RUN docker-php-ext-configure gd --with-jpeg --with-freetype
 
-RUN docker-php-ext-install pdo pdo_mysql zip xsl gd intl opcache exif mbstring
+# Enable sockets for rabbitmq
+RUN docker-php-ext-install pdo pdo_mysql zip xsl gd intl opcache exif mbstring sockets
 
 # Install node
 # RUN curl -sL https://deb.nodesource.com/setup_14.x | bash && apt -y install nodejs
