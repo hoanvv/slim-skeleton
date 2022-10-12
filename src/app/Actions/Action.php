@@ -55,9 +55,9 @@ abstract class Action
     /**
      * @return array|object
      */
-    protected function getFormData()
+    protected function getFormData($request)
     {
-        return $this->request->getParsedBody();
+        return $request->getParsedBody();
     }
 
     /**

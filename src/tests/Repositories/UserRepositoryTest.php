@@ -18,6 +18,10 @@ class UserRepositoryTest extends TestCase
     {
         return (require __DIR__ . '/../../config/bootstrap.php');
     }
+    public function setUpData()
+    {
+        // do something
+    }
 
     public function testFindAllUsers()
     {

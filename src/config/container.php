@@ -5,6 +5,7 @@ use Hoanvv\App\Factory\LoggerFactory;
 use Psr\Container\ContainerInterface;
 use Hoanvv\App\Database\IMasterDatabase;
 use Hoanvv\App\Database\MasterDatabase;
+use Hoanvv\App\Mail\RabbitMqConnection;
 
 // Use mysql as default database
 $driver = $_ENV['driver'] ?? 'mysql';
@@ -33,4 +34,21 @@ return [
     //     }
     // },
     IMasterDatabase::class => $dbObject,
+    
+    // add rabbit connnection as a service
+    RabbitMqConnection::class => function (ContainerInterface $container) {
+        return new RabbitMqConnection(
+            [
+                'hosts' => [
+                    [
+                        'host' => 'rabbitmq',
+                        'port' => 5672,
+                        'user' => 'guest',
+                        'password' => 'guest',
+                        'vhost' => '/',
+                    ]
+                ]
+            ]
+        );
+    }
 ];
